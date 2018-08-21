@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Map</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/css/bootstrap.min.css"
+          integrity="2hfp1SzUoho7/TsGGGDaFdsuuDL0LX2hnUp6VkX3CUQ2K4K+xjboZdsXyp4oUHZj" crossorigin="anonymous">
+    <link rel="stylesheet" href="CSS.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css"
+          integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js"
+            integrity="sha512-tAGcCfR4Sc5ZP5ZoVz0quoZDYX5aCtEm/eu1KhSLj2c9eFrylXZknQYmxUssFaVJKvvc0dJQixhGjG2yXWiV9Q=="
+            crossorigin=""></script>
+    <script src="leaflet.geocsv.js"/>
+    <script src="/js-cookie/src/js.cookie.js"></script>
+
+</head>
+<body>
+
+<script src='https://api.mapbox.com/mapbox.js/plugins/leaflet-omnivore/v0.2.0/leaflet-omnivore.min.js'></script>
+
+<form class="navbar-form navbar-left" role="search">
+    <div class="form-group">
+        <input type="text" class="form-control" placeholder="Search" id="myInput">
+        <button type="button" class="btn btn-primary" id="show">Презентация</button>
+    </div>
+</form>
+
+<div id="mapid"></div>
+
+<table class="table table-striped table-hover" id="table">
+    <thead>
+    <tr>
+        <th>Название</th>
+        <th>Адресс</th>
+    </tr>
+    </thead>
+    <tbody id="in">
+
+    </tbody>
+</table>
+
+
+<script type="text/javascript">
+
+    if (!document.cookie) {
+        document.cookie = "x=47.074274";
+        document.cookie = "y=-13.651775";
+        document.cookie = "zoom = 3"
+    }
+
+    function getCookie(name) {
+        var matches = document.cookie.match(new RegExp(
+            "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+        ));
+        return matches ? decodeURIComponent(matches[1]) : undefined;
+    }
+
+
+    function shedule(arr, i) {
+        setTimeout(function () {
+            console.log($(arr[i].cells[0]).text());
+            let mas = $(arr[i].cells[2]).text().split(',');
+            L.popup()
+                .setLatLng([Number.parseFloat(mas[1]), Number.parseFloat(mas[0])])
+                .setContent($(arr[i].cells[0]).text() + $(arr[i].cells[1]).text())
+                .openOn(map);
+            map.setView([Number.parseFloat(mas[1]), Number.parseFloat(mas[0])], 100);
+
+            shedule(arr, i + 1);
+        }, 5000);
+    }
+
+    $('#show').on('click', function () {
+        shedule(document.getElementsByClassName("element"), 0);
+    });
+
+    $(document).ready(function () {
+        $("#myInput").on("keyup", function () {
+            var value = $(this).val().toLowerCase();
+            map.removeLayer(layer1);
+            map.removeLayer(layer3);
+            map.removeLayer(layer2);
+            markerGroup.clearLayers();
+
+            $("#in tr").filter(function () {
+                $(this).toggle($(this.cells[0]).text().toLowerCase().indexOf(value) > -1);
+
+                if ($(this.cells[0]).text().toLowerCase().indexOf(value) > -1) {
+                    mas = $(this.cells[2]).text().split(',');
+                    l = L.marker([Number.parseFloat(mas[1]), Number.parseFloat(mas[0])]).addTo(markerGroup);
+                    l.bindPopup($(this.cells[0]).text() + $(this.cells[1]).text());
+                }
+            });
+        });
+    });
+
+    function getmap(url) {
+        let js = $.ajax({
+            url: url,
+            async: false
+        });
+        return js.responseText;
+    }
+
+    function OnEachFeatureFunction(feature, layer) {
+        if (feature.properties.name) {
+            layer.bindPopup(feature.properties.name + feature.properties.address);
+        }
+
+        $('#in').append('<tr class="element"><td>' + feature.properties.name + '</td>' + '<td>' + feature.properties.address + '</td><td style="display: none" class="cord">' + feature.geometry.coordinates + '</td></tr>')
+    }
+
+    function OnEachFeatureFunction1(feature, layer) {
+        if (feature.properties.name_ru) {
+            layer.bindPopup(feature.properties.name_ru);
+        }
+
+        $('#in').append('<tr class="element"> <td>' + feature.properties.name_ru + '</td>' + '<td>' + feature.properties.id_entrance + '</td><td style="display: none" class="cord">' + feature.geometry.coordinates + '</td> </tr>')
+    }
+
+    function OnEachFeatureFunction2(feature, layer) {
+        if (feature.properties.name) {
+            layer.bindPopup(feature.properties.name + feature.properties.adres);
+        }
+
+        $('#in').append('<tr> <td>' + feature.properties.name + '</td>' + '<td>' + feature.properties.adres + '</td><td style="display: none" class="cord">' + feature.geometry.coordinates + '</td> </tr>')
+    }
+
+</script>
+
+<script>
+    let mbUrl = 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' +
+        'pk.eyJ1IjoiZG1pdHlyIiwiYSI6ImNqbDF6dmVqaTFnZnAzcHIwMWQ3NHlpMzUifQ.RD4uay1hdkNb2hX1cCUlkw';
+
+    let mbAttr = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+        '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+        'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>';
+
+    let grayscale = L.tileLayer(mbUrl, {id: 'mapbox.light', attribution: mbAttr});
+
+    let map = L.map('mapid', {
+        center: [getCookie('x'), getCookie('y')],
+        zoom: getCookie('zoom'),
+        layers: [grayscale]
+    });
+
+    let json1 = JSON.parse(getmap('/Map/layers/layer1.geojson'));
+    let csv = getmap('/Map/layers/layer2.csv');
+    let json3 = JSON.parse(getmap('/Map/layers/layer3.json'));
+
+    let layer1 = L.geoJson(json1, {
+        onEachFeature: OnEachFeatureFunction
+    }).addTo(map);
+
+
+    let layer2 = L.geoCsv(csv, {
+        firstLineTitles: true,
+        fieldSeparator: ';',
+        onEachFeature: OnEachFeatureFunction1,
+        titles: ['id_entrance', 'meetcode', 'name_ru',
+            'name_en', 'id_station', 'direction', 'lat', 'lon',
+            'max_width', 'min_step', 'min_step_ramp', 'lift',
+            'lift_minus_step', 'min_rail_width', 'max_rail_width',
+            'max_angle', 'escalator', 'time'],
+        latitudeTitle: 'lat',
+        longitudeTitle: 'lon',
+    }).addTo(map);
+
+    let layer3 = L.geoJSON(json3, {
+        onEachFeature: OnEachFeatureFunction2
+    }).addTo(map);
+
+    let overlays = {
+        "Layer1": layer1,
+        "Layer2": layer2,
+        "Layer3": layer3
+    };
+
+    L.control.layers(null, overlays).addTo(map);
+    let markerGroup = L.layerGroup().addTo(map);
+
+    $('table').on('click', 'tr', function (event) {
+        mas = event.currentTarget.lastElementChild.childNodes["0"].data.split(',');
+        map.setView([Number.parseFloat(mas[1]), Number.parseFloat(mas[0])], 100);
+        document.cookie = "x=" + mas[1];
+        document.cookie = "y=" + mas[0];
+        document.cookie = "zoom = 100"
+    });
+
+</script>
+
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.0.0/jquery.min.js"
+        integrity="sha384-THPy051/pYDQGanwU6poAc/hOdQxjnOEXzbT+OuUAFqNqFjL+4IGLBgCJC3ZOShY"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.2.0/js/tether.min.js"
+        integrity="sha384-Plbmg8JY28KFelvJVai01l8WyZzrYWG825m+cZ0eDDS1f7d/js6ikvy1+X+guPIB"
+        crossorigin="anonymous"></script>
+<!--<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.4/js/bootstrap.min.js" integrity="VjEeINv9OSwtWFLAtmc4JCtEJXXBub00gtSnszmspDLCtC0I4z4nqz7rEFbIZLLU" crossorigin="anonymous"></script>-->
+</body>
+</html>
